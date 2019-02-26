@@ -120,7 +120,7 @@ public class DiscoveryClient implements EurekaClient {
     private static final String COMMA_STRING = VALUE_DELIMITER;
 
     /**
-     * @deprecated here for legacy support as the client config has moved to be an instance variable
+     * @deprecated here for legacy support as the client config has moved to be an instance variable——
      */
     @Deprecated
     private static EurekaClientConfig staticClientConfig;
@@ -139,9 +139,13 @@ public class DiscoveryClient implements EurekaClient {
      * - updating service urls
      * - scheduling a TimedSuperVisorTask
      */
+    //定时器
     private final ScheduledExecutorService scheduler;
     // additional executors for supervised subtasks
+    //心跳检测
     private final ThreadPoolExecutor heartbeatExecutor;
+
+    //缓存刷新
     private final ThreadPoolExecutor cacheRefreshExecutor;
 
     private final Provider<HealthCheckHandler> healthCheckHandlerProvider;

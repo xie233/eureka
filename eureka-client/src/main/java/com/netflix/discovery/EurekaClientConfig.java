@@ -57,9 +57,10 @@ public interface EurekaClientConfig {
     /**
      * Indicates how often(in seconds) to fetch the registry information from
      * the eureka server.
-     *
+     * 多久去获取注册表的信息
      * @return the fetch interval in seconds.
      */
+
     int getRegistryFetchIntervalSeconds();
 
     /**

@@ -122,6 +122,7 @@ public interface EurekaInstanceConfig {
      *
      * @return time in seconds
      */
+    //心跳频率  租期续约
     int getLeaseRenewalIntervalInSeconds();
 
     /**
@@ -140,6 +141,7 @@ public interface EurekaInstanceConfig {
      *
      * @return value indicating time in seconds.
      */
+    //契约过期时间
     int getLeaseExpirationDurationInSeconds();
 
     /**

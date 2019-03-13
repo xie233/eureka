@@ -2,6 +2,7 @@ package com.netflix.eureka;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import com.netflix.config.ConfigurationManager;
 import org.junit.Assert;
@@ -30,6 +31,7 @@ public class DefaultEurekaServerConfigTest {
         Assert.assertTrue("Remote region 2 not found.", remoteRegionUrlsWithName.containsKey(region2));
         Assert.assertEquals("Unexpected remote region 1 url.", region1url, remoteRegionUrlsWithName.get(region1));
         Assert.assertEquals("Unexpected remote region 2 url.", region2url, remoteRegionUrlsWithName.get(region2));
+
 
     }
 

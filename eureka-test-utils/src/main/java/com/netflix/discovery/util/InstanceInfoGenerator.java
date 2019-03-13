@@ -1,11 +1,6 @@
 package com.netflix.discovery.util;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import com.netflix.appinfo.AmazonInfo;
 import com.netflix.appinfo.AmazonInfo.MetaDataKey;
@@ -39,6 +34,7 @@ public class InstanceInfoGenerator {
     private final boolean withMetaData;
     private final boolean includeAsg;
     private final boolean useInstanceId;
+    private int port;
 
     InstanceInfoGenerator(InstanceInfoGeneratorBuilder builder) {
         this.instanceCount = builder.instanceCount;
@@ -48,6 +44,7 @@ public class InstanceInfoGenerator {
         this.withMetaData = builder.includeMetaData;
         this.includeAsg = builder.includeAsg;
         this.useInstanceId = builder.useInstanceId;
+        this.port = builder.port;
     }
 
     public Applications takeDelta(int count) {
@@ -85,7 +82,9 @@ public class InstanceInfoGenerator {
                 if (!hasNext()) {
                     throw new NoSuchElementException("no more InstanceInfo elements");
                 }
-                InstanceInfo toReturn = generateInstanceInfo(currentApp, appInstanceIds[currentApp], useInstanceId, ActionType.ADDED);
+//                InstanceInfo toReturn = generateInstanceInfo(currentApp, appInstanceIds[currentApp], useInstanceId, ActionType.ADDED);
+                InstanceInfo toReturn = newInstanceInfo(currentApp, appInstanceIds[currentApp], useInstanceId,
+                        ActionType.ADDED,port);
                 appInstanceIds[currentApp]++;
                 currentApp = (currentApp + 1) % appNames.length;
                 returned++;
@@ -147,9 +146,16 @@ public class InstanceInfoGenerator {
     public static InstanceInfo takeOne() {
         return newBuilder(1, 1).withMetaData(true).build().serviceIterator().next();
     }
+//添加实例信息构造器
+    public static InstanceInfo takeMore(int instanceCount,int applicationCount,int port) {
+        return newBuilder(instanceCount, applicationCount,port).withMetaData(true).build().serviceIterator().next();
+    }
 
     public static InstanceInfoGeneratorBuilder newBuilder(int instanceCount, int applicationCount) {
         return new InstanceInfoGeneratorBuilder(instanceCount, applicationCount);
+    }
+    public static InstanceInfoGeneratorBuilder newBuilder(int instanceCount, int applicationCount,int port) {
+        return new InstanceInfoGeneratorBuilder(instanceCount, applicationCount,port);
     }
 
     public static InstanceInfoGeneratorBuilder newBuilder(int instanceCount, String... appNames) {
@@ -168,6 +174,81 @@ public class InstanceInfoGenerator {
     }
 
     // useInstanceId to false to generate older InstanceInfo types that does not use instanceId field for instance id.
+//新曾创造实例信息
+    private InstanceInfo newInstanceInfo(int appIndex, int appInstanceId, boolean useInstanceId,
+                                        ActionType actionType,int port) {
+        String appName = appNames[appIndex];
+        String hostName = "instance" + appInstanceId + '.' + appName + ".com";
+        String privateHostname = "ip-10.0" + appIndex + "." + appInstanceId + ".compute.internal";
+        String publicIp = "20.0." + appIndex + '.' + appInstanceId;
+        String privateIp = "192.168." + appIndex + '.' + appInstanceId;
+
+        int insId = new Random().nextInt(100000);
+        String instanceId = String.format("i-%04d%04d", appIndex, insId);
+        if (taggedId) {
+            instanceId = instanceId + '_' + appName;
+        }
+
+        AmazonInfo dataCenterInfo = AmazonInfo.Builder.newBuilder()
+                .addMetadata(MetaDataKey.accountId, "testAccountId")
+                .addMetadata(MetaDataKey.amiId, String.format("ami-%04d%04d", appIndex, appInstanceId))
+                .addMetadata(MetaDataKey.availabilityZone, zone)
+                .addMetadata(MetaDataKey.instanceId, instanceId)
+                .addMetadata(MetaDataKey.instanceType, "m2.xlarge")
+                .addMetadata(MetaDataKey.localHostname, privateHostname)
+                .addMetadata(MetaDataKey.localIpv4, privateIp)
+                .addMetadata(MetaDataKey.publicHostname, hostName)
+                .addMetadata(MetaDataKey.publicIpv4, publicIp)
+                .build();
+
+        String unsecureURL = "http://" + hostName + ":"+ port;
+        String secureURL = "https://" + hostName + ":"+(port+1);
+
+        long now = System.currentTimeMillis();
+        LeaseInfo leaseInfo = LeaseInfo.Builder.newBuilder()
+                .setDurationInSecs(3 * RENEW_INTERVAL)
+                .setRenewalIntervalInSecs(RENEW_INTERVAL)
+                .setServiceUpTimestamp(now - RENEW_INTERVAL)
+                .setRegistrationTimestamp(now)
+                .setEvictionTimestamp(now + 3 * RENEW_INTERVAL)
+                .setRenewalTimestamp(now + RENEW_INTERVAL)
+                .build();
+
+        Builder builder = useInstanceId
+                ? InstanceInfo.Builder.newBuilder().setInstanceId(instanceId)
+                : InstanceInfo.Builder.newBuilder();
+
+        builder
+                .setActionType(actionType)
+                .setAppGroupName(appName + "Group")
+                .setAppName(appName)
+                .setHostName(hostName)
+                .setIPAddr(publicIp)
+                .setPort(port)
+                .setSecurePort(port+1)
+                .enablePort(PortType.SECURE, true)
+                .setHealthCheckUrls("/healthcheck", unsecureURL + "/healthcheck", secureURL + "/healthcheck")
+                .setHomePageUrl("/homepage", unsecureURL + "/homepage")
+                .setStatusPageUrl("/status", unsecureURL + "/status")
+                .setLeaseInfo(leaseInfo)
+                .setStatus(InstanceStatus.UP)
+                .setVIPAddress(appName + ":"+ port)
+                .setSecureVIPAddress(appName + ":"+(port+1))
+                .setDataCenterInfo(dataCenterInfo)
+                .setLastUpdatedTimestamp(System.currentTimeMillis() - 100)
+                .setLastDirtyTimestamp(System.currentTimeMillis() - 100)
+                .setIsCoordinatingDiscoveryServer(true)
+                .enablePort(PortType.UNSECURE, true);
+        if (includeAsg) {
+            builder.setASGName(appName + "ASG");
+        }
+        if (withMetaData) {
+            builder.add("appKey" + appIndex, Integer.toString(appInstanceId));
+        }
+        return builder.build();
+    }
+
+
     private InstanceInfo generateInstanceInfo(int appIndex, int appInstanceId, boolean useInstanceId, ActionType actionType) {
         String appName = appNames[appIndex];
         String hostName = "instance" + appInstanceId + '.' + appName + ".com";
@@ -243,6 +324,9 @@ public class InstanceInfoGenerator {
 
         private final int instanceCount;
 
+        //add
+        private int port;
+
         private String[] appNames;
 
         private boolean includeMetaData;
@@ -250,6 +334,17 @@ public class InstanceInfoGenerator {
         private String zone;
         private boolean taggedId;
         private boolean useInstanceId = true;
+
+        //add
+        public InstanceInfoGeneratorBuilder(int instanceCount, int applicationCount,int port) {
+            this.instanceCount = instanceCount;
+            String[] appNames = new String[applicationCount];
+            for (int i = 0; i < appNames.length; i++) {
+                appNames[i] = "application" + i;
+            }
+            this.appNames = appNames;
+            this.port = port;
+        }
 
         public InstanceInfoGeneratorBuilder(int instanceCount, int applicationCount) {
             this.instanceCount = instanceCount;

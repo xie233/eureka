@@ -128,6 +128,8 @@ public class PeerEurekaNodes {
      *
      * @return peer URLs with node's own URL filtered out
      */
+
+    //解析得到对等节点的url
     protected List<String> resolvePeerUrls() {
         InstanceInfo myInfo = applicationInfoManager.getInfo();
         String zone = InstanceInfo.getZone(clientConfig.getAvailabilityZones(clientConfig.getRegion()), myInfo);

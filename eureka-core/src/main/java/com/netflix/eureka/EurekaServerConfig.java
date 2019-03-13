@@ -110,6 +110,7 @@ public interface EurekaServerConfig {
      *
      * @return true to enable self preservation, false otherwise.
      */
+    // 网络分区，可用节点丢失过多，自我保护模式
     boolean shouldEnableSelfPreservation();
 
     /**
@@ -125,6 +126,7 @@ public interface EurekaServerConfig {
      * @return value between 0 and 1 indicating the percentage. For example,
      *         <code>85%</code> will be specified as <code>0.85</code>.
      */
+    //节点丢失比例，超过阈值开启
     double getRenewalPercentThreshold();
 
     /**
@@ -609,6 +611,7 @@ public interface EurekaServerConfig {
     /**
      * Indicates whether the rate limiter should be enabled or disabled.
      */
+    //限流开启
     boolean isRateLimiterEnabled();
 
     /**

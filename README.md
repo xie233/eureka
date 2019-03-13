@@ -31,3 +31,8 @@ Support
 Documentation
 --------------
 Please see [wiki](https://github.com/Netflix/eureka/wiki) for detailed documentation.
+
+ADD
+--------------
+
+修改server和client的配置文件，连接client和server，方便测试；
